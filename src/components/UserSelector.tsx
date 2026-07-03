@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import { User } from '../types/User';
 import classNames from 'classnames';
 
@@ -14,28 +15,18 @@ export const UserSelector: React.FC<Props> = ({
   selectUser,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const handleBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+      setIsOpen(false);
+    }
+  };
 
   return (
     <div
-      ref={dropdownRef}
       data-cy="UserSelector"
       className={classNames('dropdown', { 'is-active': isOpen })}
+      onBlur={handleBlur}
     >
       <div className="dropdown-trigger">
         <button
@@ -80,4 +71,22 @@ export const UserSelector: React.FC<Props> = ({
       </div>
     </div>
   );
+};
+
+UserSelector.propTypes = {
+  users: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      name: PropTypes.string.isRequired,
+      email: PropTypes.string.isRequired,
+      phone: PropTypes.string.isRequired,
+    }).isRequired,
+  ).isRequired,
+  selectedUser: PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    name: PropTypes.string.isRequired,
+    email: PropTypes.string.isRequired,
+    phone: PropTypes.string.isRequired,
+  }),
+  selectUser: PropTypes.func.isRequired,
 };

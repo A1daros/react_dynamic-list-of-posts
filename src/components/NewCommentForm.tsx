@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import { CommentData } from '../types/Comment';
 import classNames from 'classnames';
 
@@ -9,26 +10,18 @@ type Props = {
 export const NewCommentForm: React.FC<Props> = ({ onSubmit }) => {
   const [submitting, setSubmitting] = useState(false);
 
-  const [values, setValues] = useState({ name: '', email: '', body: '' });
-  const [errors, setErrors] = useState({
-    name: false,
-    email: false,
-    body: false,
+  const [formState, setFormState] = useState({
+    values: { name: '', email: '', body: '' },
+    errors: { name: false, email: false, body: false },
   });
 
-  const { name, email, body } = values;
+  const { name, email, body } = formState.values;
+  const { errors } = formState;
 
   const clearForm = () => {
-    setValues({
-      name: '',
-      email: '',
-      body: '',
-    });
-
-    setErrors({
-      name: false,
-      email: false,
-      body: false,
+    setFormState({
+      values: { name: '', email: '', body: '' },
+      errors: { name: false, email: false, body: false },
     });
   };
 
@@ -37,8 +30,10 @@ export const NewCommentForm: React.FC<Props> = ({ onSubmit }) => {
   ) => {
     const { name: field, value } = event.target;
 
-    setValues(prev => ({ ...prev, [field]: value }));
-    setErrors(prev => ({ ...prev, [field]: false }));
+    setFormState(prev => ({
+      values: { ...prev.values, [field]: value },
+      errors: { ...prev.errors, [field]: false },
+    }));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -50,7 +45,10 @@ export const NewCommentForm: React.FC<Props> = ({ onSubmit }) => {
       body: !body.trim(),
     };
 
-    setErrors(nextErrors);
+    setFormState(prev => ({
+      ...prev,
+      errors: nextErrors,
+    }));
 
     if (nextErrors.name || nextErrors.email || nextErrors.body) {
       return;
@@ -59,9 +57,10 @@ export const NewCommentForm: React.FC<Props> = ({ onSubmit }) => {
     try {
       setSubmitting(true);
       await onSubmit({ name, email, body });
-      setValues(prev => ({
+
+      setFormState(prev => ({
         ...prev,
-        body: '',
+        values: { ...prev.values, body: '' },
       }));
     } catch {
     } finally {
@@ -193,4 +192,8 @@ export const NewCommentForm: React.FC<Props> = ({ onSubmit }) => {
       </div>
     </form>
   );
+};
+
+NewCommentForm.propTypes = {
+  onSubmit: PropTypes.func.isRequired,
 };

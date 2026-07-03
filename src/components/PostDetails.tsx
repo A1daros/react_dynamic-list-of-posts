@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Loader } from './Loader';
 import { NewCommentForm } from './NewCommentForm';
 import { Comment, CommentData } from '../types/Comment';
@@ -129,4 +130,26 @@ export const PostDetails: React.FC<Props> = ({
       {isFormOpen && <NewCommentForm onSubmit={handleCommentSubmit} />}
     </div>
   );
+};
+
+PostDetails.propTypes = {
+  post: PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    title: PropTypes.string.isRequired,
+    body: PropTypes.string.isRequired,
+    userId: PropTypes.number.isRequired,
+  }),
+  comments: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      postId: PropTypes.number.isRequired,
+      name: PropTypes.string.isRequired,
+      email: PropTypes.string.isRequired,
+      body: PropTypes.string.isRequired,
+    }).isRequired,
+  ).isRequired,
+  error: PropTypes.string.isRequired,
+  loading: PropTypes.bool.isRequired,
+  onDeleteComment: PropTypes.func.isRequired,
+  onAddComment: PropTypes.func.isRequired,
 };

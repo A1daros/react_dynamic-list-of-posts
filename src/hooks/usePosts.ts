@@ -9,45 +9,50 @@ export const usePosts = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
 
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [selection, setSelection] = useState<{
+    user: User | null;
+    post: Post | null;
+  }>({
+    user: null,
+    post: null,
+  });
 
-  const [isPostsLoading, setIsPostsLoading] = useState(false);
-  const [postsError, setPostsError] = useState('');
-
-  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
-  const [commentsError, setCommentsError] = useState('');
+  const [loading, setLoading] = useState({ posts: false, comments: false });
+  const [errors, setErrors] = useState({ posts: '', comments: '' });
 
   const handlePostClick = (post: Post) => {
-    setSelectedPost(currentPost => {
-      if (currentPost?.id === post.id) {
-        return null;
-      }
-
-      return post;
-    });
+    setSelection(prev => ({
+      ...prev,
+      post: prev.post?.id === post.id ? null : post,
+    }));
   };
 
   const handleSelectUser = (user: User) => {
-    setSelectedUser(user);
-    setSelectedPost(null);
+    setSelection({
+      user,
+      post: null,
+    });
   };
 
-  const handleDeleteComment = (commentId: number) => {
+  const handleDeleteComment = async (commentId: number) => {
     const commentToDelete = comments.find(comment => comment.id === commentId);
 
     if (!commentToDelete) {
       return;
     }
 
-    setCommentsError('');
-
+    setErrors(prev => ({ ...prev, comments: '' }));
     setComments(prev => prev.filter(comment => comment.id !== commentId));
 
-    client.delete(`/comments/${commentId}`).catch(() => {
+    try {
+      await client.delete(`/comments/${commentId}`);
+    } catch {
       setComments(prev => [...prev, commentToDelete]);
-      setCommentsError('Failed to delete comment. Please try again.');
-    });
+      setErrors(prev => ({
+        ...prev,
+        comments: 'Failed to delete comment. Please try again.',
+      }));
+    }
   };
 
   const handleAddComment = (newComment: Comment) => {
@@ -55,64 +60,87 @@ export const usePosts = () => {
   };
 
   useEffect(() => {
-    setIsPostsLoading(true);
-    setPostsError('');
+    const fetchUsers = async () => {
+      setLoading(prev => ({ ...prev, posts: true }));
 
-    client
-      .get<User[]>('/users')
-      .then(data => setUsers(data))
-      .catch(() => setPostsError('Failed to load users'))
-      .finally(() => {
-        setIsPostsLoading(false);
-      });
+      try {
+        const data = await client.get<User[]>('/users');
+
+        setUsers(data);
+      } catch {
+        setErrors(prev => ({ ...prev, posts: 'Failed to load users' }));
+      } finally {
+        setLoading(prev => ({ ...prev, posts: false }));
+      }
+    };
+
+    fetchUsers();
   }, []);
 
   useEffect(() => {
-    if (!selectedUser) {
-      setPosts([]);
+    const fetchPosts = async () => {
+      if (!selection.user) {
+        setPosts([]);
 
-      return;
-    }
+        return;
+      }
 
-    setIsPostsLoading(true);
-    setPostsError('');
+      setLoading(prev => ({ ...prev, posts: true }));
+      setErrors(prev => ({ ...prev, posts: '' }));
 
-    client
-      .get<Post[]>(`/posts?userId=${selectedUser.id}`)
-      .then(data => setPosts(data))
-      .catch(() => setPostsError('Failed to load posts'))
-      .finally(() => {
-        setIsPostsLoading(false);
-      });
-  }, [selectedUser]);
+      try {
+        const data = await client.get<Post[]>(
+          `/posts?userId=${selection.user.id}`,
+        );
+
+        setPosts(data);
+      } catch {
+        setErrors(prev => ({ ...prev, posts: 'Failed to load posts' }));
+      } finally {
+        setLoading(prev => ({ ...prev, posts: false }));
+      }
+    };
+
+    fetchPosts();
+  }, [selection.user]);
 
   useEffect(() => {
-    if (!selectedPost) {
-      setComments([]);
+    const fetchComments = async () => {
+      if (!selection.post) {
+        setComments([]);
 
-      return;
-    }
+        return;
+      }
 
-    setIsCommentsLoading(true);
-    setCommentsError('');
+      setLoading(prev => ({ ...prev, comments: true }));
+      setErrors(prev => ({ ...prev, comments: '' }));
 
-    client
-      .get<Comment[]>(`/comments?postId=${selectedPost.id}`)
-      .then(data => setComments(data))
-      .catch(() => setCommentsError('Failed to load comments'))
-      .finally(() => setIsCommentsLoading(false));
-  }, [selectedPost]);
+      try {
+        const data = await client.get<Comment[]>(
+          `/comments?postId=${selection.post.id}`,
+        );
+
+        setComments(data);
+      } catch {
+        setErrors(prev => ({ ...prev, comments: 'Failed to load comments' }));
+      } finally {
+        setLoading(prev => ({ ...prev, comments: false }));
+      }
+    };
+
+    fetchComments();
+  }, [selection.post]);
 
   return {
     users,
     posts,
     comments,
-    selectedUser,
-    selectedPost,
-    isPostsLoading,
-    postsError,
-    isCommentsLoading,
-    commentsError,
+    selectedUser: selection.user,
+    selectedPost: selection.post,
+    isPostsLoading: loading.posts,
+    postsError: errors.posts,
+    isCommentsLoading: loading.comments,
+    commentsError: errors.comments,
     handleSelectUser,
     handlePostClick,
     handleDeleteComment,
